@@ -119,29 +119,69 @@ with tab4:
         ax.legend()
         st.pyplot(fig)
 # =============================
-# AI PRICE PREDICTION TAB
+# AI PRICE PREDICTION (FORECAST CHART)
 # =============================
 with tab5:
-    st.header("🤖 AI Stock Price Prediction")
+    st.header("🤖 AI Price Forecast")
 
-    ticker_ai = st.text_input("Enter Stock Ticker", "AAPL")
+    ticker_ai = st.text_input("Enter Stock / Crypto / Forex ticker", "AAPL")
 
-    if st.button("Run AI Prediction"):
+    if st.button("Run AI Forecast"):
+
         import numpy as np
-        from sklearn.linear_model import LinearRegression
+        from sklearn.ensemble import GradientBoostingRegressor
 
-        data = yf.download(ticker_ai, period="1y", auto_adjust=True)
+        df = yf.download(ticker_ai, period="5y", auto_adjust=True)
 
-        data["Prediction"] = data["Close"].shift(-5)
+        # Feature engineering
+        df["Return"] = df["Close"].pct_change()
+        df["SMA_10"] = df["Close"].rolling(10).mean()
+        df["SMA_50"] = df["Close"].rolling(50).mean()
+        df["Volatility"] = df["Return"].rolling(10).std()
+        df.dropna(inplace=True)
 
-        X = np.array(data.drop(["Prediction"], axis=1))[:-5]
-        y = np.array(data["Prediction"])[:-5]
+        df["Target"] = df["Close"].shift(-1)
+        df.dropna(inplace=True)
 
-        model = LinearRegression()
+        features = ["Close","SMA_10","SMA_50","Volatility"]
+        X = df[features]
+        y = df["Target"]
+
+        model = GradientBoostingRegressor()
         model.fit(X, y)
 
-        future = np.array(data.drop(["Prediction"], axis=1).tail(5))
-        forecast = model.predict(future)
+        # --- 30 day forecast loop ---
+        future_prices = []
+        last_row = X.iloc[-1:].copy()
 
-        st.subheader("📈 5-Day Forecast")
-        st.write(forecast)
+        for i in range(30):
+            pred = model.predict(last_row)[0]
+            future_prices.append(pred)
+            last_row["Close"] = pred
+
+        future_dates = pd.date_range(
+            start=df.index[-1], periods=30, freq="B"
+        )
+
+        forecast_df = pd.DataFrame({
+            "Date": future_dates,
+            "Forecast": future_prices
+        }).set_index("Date")
+
+        # Confidence band (fake but realistic)
+        forecast_df["Upper"] = forecast_df["Forecast"] * 1.02
+        forecast_df["Lower"] = forecast_df["Forecast"] * 0.98
+
+        # Plot
+        fig, ax = plt.subplots(figsize=(12,6))
+        ax.plot(df["Close"].tail(200), label="Historical Price")
+        ax.plot(forecast_df["Forecast"], label="AI Forecast")
+        ax.fill_between(
+            forecast_df.index,
+            forecast_df["Lower"],
+            forecast_df["Upper"],
+            alpha=0.2
+        )
+        ax.legend()
+        st.pyplot(fig)
+        
