@@ -6,12 +6,8 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="AI Trading Dashboard", layout="wide")
 st.title("📈 AI Trading Dashboard")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🔎 Scanner",
-    "📉 Chart",
-    "💼 Portfolio",
-    "📊 Backtest",
-    "🤖 AI Prediction"
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "🔎 Scanner", "📉 Chart", "💼 Portfolio", "📊 Backtest", "🤖 AI Forecast", "📧 Alerts"
 ])
 
 # =============================
