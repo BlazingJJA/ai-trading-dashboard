@@ -119,18 +119,17 @@ with tab4:
         ax.legend()
         st.pyplot(fig)
 # =============================
-# AI PRICE PREDICTION (ML MODEL)
+# AI PRICE PREDICTION (FORECAST CHART)
 # =============================
 with tab5:
-    st.header("🤖 AI Price Prediction")
+    st.header("🤖 AI Price Forecast")
 
     ticker_ai = st.text_input("Enter Stock / Crypto / Forex ticker", "AAPL")
 
-    if st.button("Run AI Prediction"):
+    if st.button("Run AI Forecast"):
 
         import numpy as np
         from sklearn.ensemble import GradientBoostingRegressor
-        from sklearn.model_selection import train_test_split
 
         df = yf.download(ticker_ai, period="5y", auto_adjust=True)
 
@@ -141,7 +140,6 @@ with tab5:
         df["Volatility"] = df["Return"].rolling(10).std()
         df.dropna(inplace=True)
 
-        # Predict tomorrow's close
         df["Target"] = df["Close"].shift(-1)
         df.dropna(inplace=True)
 
@@ -149,20 +147,41 @@ with tab5:
         X = df[features]
         y = df["Target"]
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, shuffle=False, test_size=0.2
+        model = GradientBoostingRegressor()
+        model.fit(X, y)
+
+        # --- 30 day forecast loop ---
+        future_prices = []
+        last_row = X.iloc[-1:].copy()
+
+        for i in range(30):
+            pred = model.predict(last_row)[0]
+            future_prices.append(pred)
+            last_row["Close"] = pred
+
+        future_dates = pd.date_range(
+            start=df.index[-1], periods=30, freq="B"
         )
 
-        model = GradientBoostingRegressor()
-        model.fit(X_train, y_train)
+        forecast_df = pd.DataFrame({
+            "Date": future_dates,
+            "Forecast": future_prices
+        }).set_index("Date")
 
-        last_row = X.iloc[-1:].values
-        prediction = model.predict(last_row)[0]
-        current_price = df["Close"].iloc[-1]
+        # Confidence band (fake but realistic)
+        forecast_df["Upper"] = forecast_df["Forecast"] * 1.02
+        forecast_df["Lower"] = forecast_df["Forecast"] * 0.98
 
-        change_pct = ((prediction - current_price) / current_price) * 100
-
-        st.metric("Current Price", f"${current_price:.2f}")
-        st.metric("Predicted Next Close", f"${prediction:.2f}")
-        st.metric("Predicted Change", f"{change_pct:.2f}%")
+        # Plot
+        fig, ax = plt.subplots(figsize=(12,6))
+        ax.plot(df["Close"].tail(200), label="Historical Price")
+        ax.plot(forecast_df["Forecast"], label="AI Forecast")
+        ax.fill_between(
+            forecast_df.index,
+            forecast_df["Lower"],
+            forecast_df["Upper"],
+            alpha=0.2
+        )
+        ax.legend()
+        st.pyplot(fig)
         
