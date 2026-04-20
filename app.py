@@ -6,8 +6,12 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="AI Trading Dashboard", layout="wide")
 st.title("📈 AI Trading Dashboard")
 
-tab1, tab2, tab3, tab4 = st.tabs([
-    "🔎 Scanner", "📉 Chart", "💼 Portfolio", "📊 Backtest"
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🔎 Scanner",
+    "📉 Chart",
+    "💼 Portfolio",
+    "📊 Backtest",
+    "🤖 AI Prediction"
 ])
 
 # =============================
@@ -117,7 +121,7 @@ with tab4:
 # =============================
 # AI PRICE PREDICTION TAB
 # =============================
-with tab4:
+with tab5:
     st.header("🤖 AI Stock Price Prediction")
 
     ticker = st.text_input("Enter Stock Ticker", "AAPL")
