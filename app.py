@@ -17,13 +17,44 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # =============================
 # TAB 1 — MARKET SCANNER
 # =============================
+# =============================
+# TAB 1 — MULTI MARKET SCANNER
+# =============================
 with tab1:
-    st.header("Market Scanner")
+    st.header("🌍 Multi-Market Scanner")
 
-    tickers_input = st.text_input("Tickers", "AAPL,MSFT,TSLA,BTC-USD,ETH-USD")
-    period = st.selectbox("Period", ["1y","2y","5y","10y"])
+    market = st.selectbox(
+        "Select Market",
+        ["Stocks", "Crypto", "Forex", "Indices"]
+    )
 
-    def get_signal(ticker):
+    if market == "Stocks":
+        tickers_input = st.text_input(
+            "Tickers",
+            "AAPL,MSFT,TSLA,NVDA,AMZN"
+        )
+
+    elif market == "Crypto":
+        tickers_input = st.text_input(
+            "Crypto pairs",
+            "BTC-USD,ETH-USD,SOL-USD,BNB-USD"
+        )
+
+    elif market == "Forex":
+        tickers_input = st.text_input(
+            "Forex pairs",
+            "EURUSD=X,GBPUSD=X,USDJPY=X,XAUUSD=X"
+        )
+
+    else:
+        tickers_input = st.text_input(
+            "Indices",
+            "^GSPC,^IXIC,^DJI,^FTSE"
+        )
+
+    period = st.selectbox("Period", ["6mo","1y","2y","5y"])
+
+    def get_signal(ticker)
         df = yf.download(ticker, period=period, auto_adjust=True, progress=False)
         df["SMA_50"] = df["Close"].rolling(50).mean()
         df["SMA_200"] = df["Close"].rolling(200).mean()
@@ -35,7 +66,7 @@ with tab1:
         else:
             return "NEUTRAL"
 
-    if st.button("Run Scanner"):
+    if st.button("Run Market Scan"):
         tickers = [t.strip() for t in tickers_input.split(",")]
         results = [[t, get_signal(t)] for t in tickers]
         st.dataframe(pd.DataFrame(results, columns=["Ticker","Signal"]))
