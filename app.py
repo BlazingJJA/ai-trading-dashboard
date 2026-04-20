@@ -4,34 +4,60 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="AI Trading Dashboard", layout="wide")
-
 st.title("📈 AI Trading Dashboard")
 
-col1, col2 = st.columns(2)
-ticker = col1.text_input("Enter Stock Ticker", "AAPL")
-period = col2.selectbox("Select Period", ["1y","2y","5y","10y"])
+# -----------------------------
+# SIDEBAR SCANNER
+# -----------------------------
+st.sidebar.header("🔎 Market Scanner")
 
-if st.button("Run Analysis 🚀"):
+tickers_input = st.sidebar.text_input(
+    "Enter multiple tickers (comma separated)",
+    "AAPL,MSFT,TSLA,BTC-USD,ETH-USD"
+)
 
-    with st.spinner("Downloading data..."):
-        df = yf.download(ticker, period=period, auto_adjust=True)
+period = st.sidebar.selectbox("Select Period", ["1y","2y","5y","10y"])
 
-    df = df.dropna()
-    df = df[df["Volume"] > 0]
+def get_signal(ticker):
+    df = yf.download(ticker, period=period, auto_adjust=True, progress=False)
+    if df.empty:
+        return "No Data"
 
-    # Indicators
     df["SMA_50"] = df["Close"].rolling(50).mean()
     df["SMA_200"] = df["Close"].rolling(200).mean()
 
-    # Buy/Sell Signal
-    df["Signal"] = 0
-    df.loc[df["SMA_50"] > df["SMA_200"], "Signal"] = 1
-    df.loc[df["SMA_50"] < df["SMA_200"], "Signal"] = -1
+    if df["SMA_50"].iloc[-1] > df["SMA_200"].iloc[-1]:
+        return "BUY 🟢"
+    elif df["SMA_50"].iloc[-1] < df["SMA_200"].iloc[-1]:
+        return "SELL 🔴"
+    else:
+        return "NEUTRAL"
 
-    st.subheader("Latest Market Data")
-    st.dataframe(df.tail())
+if st.sidebar.button("Run Scanner 🚀"):
+    tickers = [t.strip() for t in tickers_input.split(",")]
+    results = []
 
-    # Chart
+    for ticker in tickers:
+        signal = get_signal(ticker)
+        results.append([ticker, signal])
+
+    df_results = pd.DataFrame(results, columns=["Ticker", "Signal"])
+    st.subheader("📊 Market Signals")
+    st.dataframe(df_results)
+
+# -----------------------------
+# SINGLE STOCK CHART
+# -----------------------------
+st.header("📉 Single Asset Analysis")
+
+ticker = st.text_input("Enter Ticker for Chart", "AAPL")
+
+if st.button("Run Chart Analysis"):
+    df = yf.download(ticker, period=period, auto_adjust=True)
+
+    df["SMA_50"] = df["Close"].rolling(50).mean()
+    df["SMA_200"] = df["Close"].rolling(200).mean()
+
     fig, ax = plt.subplots(figsize=(12,6))
     ax.plot(df["Close"], label="Price")
     ax.plot(df["SMA_50"], label="SMA 50")
@@ -40,10 +66,3 @@ if st.button("Run Analysis 🚀"):
     ax.set_title(f"{ticker} Trading Chart")
 
     st.pyplot(fig)
-
-    # Latest signal
-    latest_signal = df["Signal"].iloc[-1]
-    if latest_signal == 1:
-        st.success("🟢 BUY SIGNAL")
-    elif latest_signal == -1:
-        st.error("🔴 SELL SIGNAL")
