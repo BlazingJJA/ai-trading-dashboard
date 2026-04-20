@@ -122,26 +122,73 @@ with tab4:
 # AI PRICE PREDICTION TAB
 # =============================
 with tab5:
-    st.header("🤖 AI Stock Price Prediction")
+    # =============================
+# AI PRICE PREDICTION TAB (UPGRADED)
+# =============================
+with tab5:
+    st.header("🤖 AI Stock Price Forecast")
 
     ticker = st.text_input("Enter Stock Ticker", "AAPL")
+    forecast_days = st.slider("Days to Predict", 5, 30, 7)
 
-    if st.button("Run AI Prediction"):
-        import yfinance as yf
+    if st.button("Run AI Forecast"):
         import numpy as np
+        from sklearn.preprocessing import MinMaxScaler
         from sklearn.linear_model import LinearRegression
 
-        data = yf.download(ticker, period="1y")
-        data["Prediction"] = data["Close"].shift(-5)
+        df = yf.download(ticker, period="3y", auto_adjust=True)
 
-        X = np.array(data.drop(["Prediction"], axis=1))[:-5]
-        y = np.array(data["Prediction"])[:-5]
+        # Use only closing price
+        data = df[["Close"]].copy()
 
+        # Scale data
+        scaler = MinMaxScaler()
+        scaled = scaler.fit_transform(data)
+
+        # Create sequences
+        X = []
+        y = []
+        window = 60
+
+        for i in range(window, len(scaled)):
+            X.append(scaled[i-window:i])
+            y.append(scaled[i])
+
+        X, y = np.array(X), np.array(y)
+        X = X.reshape(X.shape[0], -1)
+
+        # Train model
         model = LinearRegression()
         model.fit(X, y)
 
-        future = np.array(data.drop(["Prediction"], axis=1).tail(5))
-        forecast = model.predict(future)
+        # Predict future prices
+        last_window = scaled[-window:]
+        preds = []
 
-        st.subheader("📈 5-Day Forecast")
-        st.write(forecast)
+        current_window = last_window.copy()
+
+        for _ in range(forecast_days):
+            pred = model.predict(current_window.reshape(1, -1))
+            preds.append(pred[0][0])
+            current_window = np.append(current_window[1:], pred, axis=0)
+
+        # Inverse scale predictions
+        forecast = scaler.inverse_transform(np.array(preds).reshape(-1,1))
+
+        # Create future dates
+        future_dates = pd.date_range(df.index[-1], periods=forecast_days+1)[1:]
+
+        # Plot
+        fig, ax = plt.subplots(figsize=(12,6))
+        ax.plot(df.index[-200:], df["Close"].tail(200), label="Historical")
+        ax.plot(future_dates, forecast, label="Forecast")
+        ax.fill_between(future_dates,
+                        forecast.flatten()*0.95,
+                        forecast.flatten()*1.05,
+                        alpha=0.2)
+
+        ax.legend()
+        st.pyplot(fig)
+
+        st.subheader("Forecast Values")
+        st.write(pd.DataFrame({"Date": future_dates, "Predicted Price": forecast.flatten()}))
