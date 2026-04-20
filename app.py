@@ -119,29 +119,50 @@ with tab4:
         ax.legend()
         st.pyplot(fig)
 # =============================
-# AI PRICE PREDICTION TAB
+# AI PRICE PREDICTION (ML MODEL)
 # =============================
 with tab5:
-    st.header("🤖 AI Stock Price Prediction")
+    st.header("🤖 AI Price Prediction")
 
-    ticker_ai = st.text_input("Enter Stock Ticker", "AAPL")
+    ticker_ai = st.text_input("Enter Stock / Crypto / Forex ticker", "AAPL")
 
     if st.button("Run AI Prediction"):
+
         import numpy as np
-        from sklearn.linear_model import LinearRegression
+        from sklearn.ensemble import GradientBoostingRegressor
+        from sklearn.model_selection import train_test_split
 
-        data = yf.download(ticker_ai, period="1y", auto_adjust=True)
+        df = yf.download(ticker_ai, period="5y", auto_adjust=True)
 
-        data["Prediction"] = data["Close"].shift(-5)
+        # Feature engineering
+        df["Return"] = df["Close"].pct_change()
+        df["SMA_10"] = df["Close"].rolling(10).mean()
+        df["SMA_50"] = df["Close"].rolling(50).mean()
+        df["Volatility"] = df["Return"].rolling(10).std()
+        df.dropna(inplace=True)
 
-        X = np.array(data.drop(["Prediction"], axis=1))[:-5]
-        y = np.array(data["Prediction"])[:-5]
+        # Predict tomorrow's close
+        df["Target"] = df["Close"].shift(-1)
+        df.dropna(inplace=True)
 
-        model = LinearRegression()
-        model.fit(X, y)
+        features = ["Close","SMA_10","SMA_50","Volatility"]
+        X = df[features]
+        y = df["Target"]
 
-        future = np.array(data.drop(["Prediction"], axis=1).tail(5))
-        forecast = model.predict(future)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, shuffle=False, test_size=0.2
+        )
 
-        st.subheader("📈 5-Day Forecast")
-        st.write(forecast)
+        model = GradientBoostingRegressor()
+        model.fit(X_train, y_train)
+
+        last_row = X.iloc[-1:].values
+        prediction = model.predict(last_row)[0]
+        current_price = df["Close"].iloc[-1]
+
+        change_pct = ((prediction - current_price) / current_price) * 100
+
+        st.metric("Current Price", f"${current_price:.2f}")
+        st.metric("Predicted Next Close", f"${prediction:.2f}")
+        st.metric("Predicted Change", f"{change_pct:.2f}%")
+        
