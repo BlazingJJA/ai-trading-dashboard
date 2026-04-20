@@ -114,3 +114,30 @@ with tab4:
         ax.plot(df["Equity"], label="Strategy Equity")
         ax.legend()
         st.pyplot(fig)
+# =============================
+# AI PRICE PREDICTION TAB
+# =============================
+with tab4:
+    st.header("🤖 AI Stock Price Prediction")
+
+    ticker = st.text_input("Enter Stock Ticker", "AAPL")
+
+    if st.button("Run AI Prediction"):
+        import yfinance as yf
+        import numpy as np
+        from sklearn.linear_model import LinearRegression
+
+        data = yf.download(ticker, period="1y")
+        data["Prediction"] = data["Close"].shift(-5)
+
+        X = np.array(data.drop(["Prediction"], axis=1))[:-5]
+        y = np.array(data["Prediction"])[:-5]
+
+        model = LinearRegression()
+        model.fit(X, y)
+
+        future = np.array(data.drop(["Prediction"], axis=1).tail(5))
+        forecast = model.predict(future)
+
+        st.subheader("📈 5-Day Forecast")
+        st.write(forecast)
