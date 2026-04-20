@@ -37,3 +37,5 @@ export default function AIPrediction() {
     </div>
   )
 }
+<Link to="/ai">AI Prediction</Link>
+<Route path="/ai" element={<AIPrediction />} />
