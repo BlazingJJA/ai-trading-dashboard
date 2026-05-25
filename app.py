@@ -52,24 +52,45 @@ with tab1:
             "^GSPC,^IXIC,^DJI,^FTSE"
         )
 
-    period = st.selectbox("Period", ["6mo","1y","2y","5y"])
+    period = st.selectbox(
+        "Period",
+        ["6mo", "1y", "2y", "5y"]
+    )
 
-def get_signal(ticker):
-        df = yf.download(ticker, period=period, auto_adjust=True, progress=False)
+    def get_signal(ticker):
+        df = yf.download(
+            ticker,
+            period=period,
+            auto_adjust=True,
+            progress=False
+        )
+
         df["SMA_50"] = df["Close"].rolling(50).mean()
         df["SMA_200"] = df["Close"].rolling(200).mean()
 
         if df["SMA_50"].iloc[-1] > df["SMA_200"].iloc[-1]:
             return "BUY 🟢"
+
         elif df["SMA_50"].iloc[-1] < df["SMA_200"].iloc[-1]:
             return "SELL 🔴"
+
         else:
             return "NEUTRAL"
 
     if st.button("Run Market Scan"):
         tickers = [t.strip() for t in tickers_input.split(",")]
-        results = [[t, get_signal(t)] for t in tickers]
-        st.dataframe(pd.DataFrame(results, columns=["Ticker","Signal"]))
+
+        results = []
+
+        for t in tickers:
+            results.append([t, get_signal(t)])
+
+        results_df = pd.DataFrame(
+            results,
+            columns=["Ticker", "Signal"]
+        )
+
+        st.dataframe(results_df)
 
 # =============================
 # TAB 2 — CHART
