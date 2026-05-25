@@ -54,7 +54,7 @@ with tab1:
 
     period = st.selectbox("Period", ["6mo","1y","2y","5y"])
 
-    def get_signal(ticker)
+def get_signal(ticker):
         df = yf.download(ticker, period=period, auto_adjust=True, progress=False)
         df["SMA_50"] = df["Close"].rolling(50).mean()
         df["SMA_200"] = df["Close"].rolling(200).mean()
